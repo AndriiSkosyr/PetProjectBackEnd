@@ -53,94 +53,102 @@ def check_status():
     return jsonify({"Logged in client`s name": isLogged})
 
 
-@app.route('/register', methods=['GET', 'POST'])
-def register_user():
-    if request.method == 'POST':
-        request_data = request.get_json()
-        clientName = None
-        clientPassword = None
-        clientEmail = None
-        clientId = None
+@app.route('/client', methods=['POST'])
+def create_client():
+    request_data = request.get_json()
+    clientName = None
+    clientPassword = None
+    clientEmail = None
+    clientId = None
 
-        if request_data:
-            if 'clientName' in request_data:
-                clientName = request_data['clientName']
-            if 'clientPassword' in request_data:
-                clientPassword = request_data['clientPassword']
-            if 'clientEmail' in request_data:
-                clientEmail = request_data['clientEmail']
-            if 'clientId' in request_data:
-                clientId = request_data['clientId']
+    if request_data:
+        if 'clientName' in request_data:
+            clientName = request_data['clientName']
+        if 'clientPassword' in request_data:
+            clientPassword = request_data['clientPassword']
+        if 'clientEmail' in request_data:
+            clientEmail = request_data['clientEmail']
+        if 'clientId' in request_data:
+            clientId = request_data['clientId']
 
-            account = DatabaseService.find_client_by_name(clientName)
-            if account:
-                msg = 'Account already exists!'
-            elif not re.match(r'[^@]+@[^@]+\.[^@]+', clientEmail):
+        account = DatabaseService.find_client(clientId)
+        if account:
+            msg = 'Account already exists!'
+        elif not re.match(r'[^@]+@[^@]+\.[^@]+', clientEmail):
+            msg = 'Invalid email address!'
+        elif not re.match(r'[A-Za-z0-9]+', clientName):
+            msg = 'Username must contain only characters and numbers !'
+        else:
+            DatabaseService.insert_client("client1", clientId, clientName, clientEmail, clientPassword)
+            msg = 'You have successfully registered!'
+        return jsonify({"message": msg})
+    else:
+        return jsonify({"message": "There is no data"})
+
+
+@app.route('/client', methods=['DELETE'])
+def delete_client():
+    request_data = request.get_json()
+    clientId = None
+
+    if request_data:
+        if 'clientId' in request_data:
+            clientId = request_data['clientId']
+
+        DatabaseService.delete_client(clientId)
+        msg = 'User account deleted successfully.'
+        return jsonify({'Message': msg})
+
+
+@app.route('/client', methods=['PUT'])
+def update_client():
+    request_data = request.get_json()
+    clientName = None
+    clientPassword = None
+    clientEmail = None
+    clientId = None
+
+    if request_data:
+        if 'clientName' in request_data:
+            clientName = request_data['clientName']
+        if 'clientPassword' in request_data:
+            clientPassword = request_data['clientPassword']
+        if 'clientEmail' in request_data:
+            clientEmail = request_data['clientEmail']
+        if 'clientId' in request_data:
+            clientId = request_data['clientId']
+
+        account = DatabaseService.find_client(clientId)
+        if account:
+            if not re.match(r'[^@]+@[^@]+\.[^@]+', clientEmail):
                 msg = 'Invalid email address!'
             elif not re.match(r'[A-Za-z0-9]+', clientName):
                 msg = 'Username must contain only characters and numbers !'
             else:
-                DatabaseService.insert_client("client1", clientId, clientName, clientEmail, clientPassword)
-                msg = 'You have successfully registered!'
+                account.client_name = clientName
+                account.client_password = clientPassword
+                account.client_email = clientEmail
+                DatabaseService.update_client(clientId, account)
+                msg = 'You have successfully updated the client account.'
             return jsonify({"message": msg})
-        else:
-            return jsonify({"message": "There is no data"})
+    else:
+        return jsonify({"message": "There is no data"})
 
 
-@app.route('/delete_user', methods=['GET', 'POST'])
-def delete_user():
-    if request.method == 'POST':
-        request_data = request.get_json()
-        clientId = None
+@app.route('/client', methods=['GET'])
+def read_client():
+    request_data = request.get_json()
+    clientId = None
 
-        if request_data:
-            if 'clientId' in request_data:
-                clientId = request_data['clientId']
+    if request_data:
+        if 'clientId' in request_data:
+            clientId = request_data['clientId']
 
-            DatabaseService.delete_client(clientId)
-            msg = 'User account deleted successfully.'
-            return jsonify({'Message': msg})
-        else:
-            msg = 'You used get method!'
-            return jsonify({"message": msg})
+        account = DatabaseService.find_client(clientId)
 
-
-@app.route('/update_user', methods=['GET', 'POST'])
-def update_user():
-    if request.method == 'POST':
-        request_data = request.get_json()
-        clientName = None
-        clientPassword = None
-        clientEmail = None
-        clientId = None
-
-        if request_data:
-            if 'clientName' in request_data:
-                clientName = request_data['clientName']
-            if 'clientPassword' in request_data:
-                clientPassword = request_data['clientPassword']
-            if 'clientEmail' in request_data:
-                clientEmail = request_data['clientEmail']
-            if 'clientId' in request_data:
-                clientId = request_data['clientId']
-
-            account = DatabaseService.find_client_by_name(clientName)
-            if account:
-                if not re.match(r'[^@]+@[^@]+\.[^@]+', clientEmail):
-                    msg = 'Invalid email address!'
-                elif not re.match(r'[A-Za-z0-9]+', clientName):
-                    msg = 'Username must contain only characters and numbers !'
-                else:
-                    DatabaseService.insert_client("client", clientId, clientName, clientEmail, clientPassword)
-                    msg = 'You have successfully updated the user account.'
-                return jsonify({"message": msg})
-        else:
-            return jsonify({"message": "There is no data"})
-
-
-@app.route('/read_users')
-def read_users():
+        return jsonify({"Client.name:": account.client_name, "Client.email:": account.client_email})
     return None
+
 
 @app.route('/add_calendar', methods=['GET', 'POST'])
 def add_calendar():

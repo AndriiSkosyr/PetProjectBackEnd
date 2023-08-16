@@ -151,9 +151,30 @@ def print_zoom_meetings():
         print(meeting)
 
 
+# functions to find objects
 def find_client_by_name(client_name):
     client = session.query(Client).filter(Client.client_name == client_name).first()
     return client
+
+
+def find_client(client_id):
+    client = session.query(Client).filter(Client.client_id == client_id).first()
+    return client
+
+
+def find_calendar(calendar_id):
+    calendar = session.query(GoogleCalendar).filter(GoogleCalendar.calendar_id == calendar_id).first()
+    return calendar
+
+
+def find_event(event_id):
+    event = session.query(CalendarEvent).filter(CalendarEvent.event_id == event_id).first()
+    return event
+
+
+def find_meeting(meeting_id):
+    meeting = session.query(ZoomMeeting).filter(ZoomMeeting.meeting_id == meeting_id).first()
+    return meeting
 
 
 # functions to update data in database
@@ -246,7 +267,3 @@ def delete_zoom_meeting(meeting_id):
     meeting = session.query(ZoomMeeting).filter(ZoomMeeting.meeting_id == meeting_id).first()
     session.delete(meeting)
     session.commit()
-
-
-# insert_client('client1', 1, 'client1', 'example@mail.com', 'qwerty')
-#print_clients()
