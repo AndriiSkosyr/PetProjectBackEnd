@@ -98,6 +98,8 @@ def delete_client():
         DatabaseService.delete_client(clientId)
         msg = 'User account deleted successfully.'
         return jsonify({'Message': msg})
+    else:
+        return jsonify({"message": "There is no data"})
 
 
 @app.route('/client', methods=['PUT'])
@@ -147,55 +149,92 @@ def read_client():
         account = DatabaseService.find_client(clientId)
 
         return jsonify({"Client.name:": account.client_name, "Client.email:": account.client_email})
-    return None
+    return jsonify({"message": "There is no data"})
 
 
-@app.route('/add_calendar', methods=['GET', 'POST'])
-def add_calendar():
-    if request.method == 'POST':
-        request_data = request.get_json()
-        calendarId = None
-        clientEvent = None
-        clientId = None
+@app.route('/calendar', methods=['POST'])
+def create_calendar():
+    request_data = request.get_json()
+    calendarId = None
+    clientEvent = None
+    clientId = None
 
-        if request_data:
-            if 'calendarId' in request_data:
-                calendarId = request_data['calendarId']
-            if 'clientEvent' in request_data:
-                clientEvent = request_data['clientEvent']
-            if 'clientId' in request_data:
-                clientId = request_data['clientId']
+    if request_data:
+        if 'calendarId' in request_data:
+            calendarId = request_data['calendarId']
+        if 'clientEvent' in request_data:
+            clientEvent = request_data['clientEvent']
+        if 'clientId' in request_data:
+            clientId = request_data['clientId']
 
-            DatabaseService.insert_google_calendar('calendar1', calendarId, clientEvent, clientId)
-            msg = 'You have successfully added the calendar!'
-            return jsonify({"message": msg})
+        calendar = DatabaseService.find_calendar(calendarId)
+        if calendar:
+            msg = 'Calendar already exists!'
         else:
-            return jsonify({"message": "There is no data"})
+            DatabaseService.insert_google_calendar("calendar", calendarId, clientEvent, clientId)
+            msg = 'You have successfully added the calendar!'
+        return jsonify({"Message": msg})
     else:
-        msg = 'You used get method!'
-        return jsonify({"message": msg})
+        return jsonify({"message": "There is no data!"})
 
 
-@app.route('/update_calendar', methods=['GET', 'POST'])
+@app.route('/update_calendar', methods=['PUT'])
 def update_calendar():
-    if request.method == 'POST':
-        request_data = request.get_json()
-        calendarId = None
-        clientEvent = None
-        clientId = None
+    request_data = request.get_json()
+    calendarId = None
+    clientEvent = None
+    clientId = None
 
-        if request_data:
-            if 'calendarId' in request_data:
-                calendarId = request_data['calendarId']
-            if 'clientEvent' in request_data:
-                clientEvent = request_data['clientEvent']
-            if 'clientId' in request_data:
-                clientId = request_data['clientId']
+    if request_data:
+        if 'calendarId' in request_data:
+            calendarId = request_data['calendarId']
+        if 'clientEvent' in request_data:
+            clientEvent = request_data['clientEvent']
+        if 'clientId' in request_data:
+            clientId = request_data['clientId']
 
-            DatabaseService.update_google_calendar()
+        calendar = DatabaseService.find_calendar(calendarId)
+        if calendar:
+            calendar.client_event = clientEvent
+            calendar.client_id = clientId
+            DatabaseService.update_google_calendar(calendarId, calendar)
+            msg = 'You have successfully updated the calendar!'
+        else:
+            msg = "There is no such calendar!"
+        return jsonify({"Message": msg})
     else:
-        msg = 'You used get method!'
-        return jsonify({"message": msg})
+        return jsonify({"message": "There is no data"})
+
+
+@app.route('/calendar', methods=['DELETE'])
+def delete_calendar():
+    request_data = request.get_json()
+    calendarId = None
+
+    if request_data:
+        if 'calendarId' in request_data:
+            calendarId = request_data['calendarId']
+
+        DatabaseService.delete_google_calendar(calendarId)
+        msg = 'Google calendar deleted successfully.'
+        return jsonify({'Message': msg})
+    else:
+        return jsonify({"message": "There is no data"})
+
+
+@app.route('/calendar', methods=['GET'])
+def read_calenar():
+    request_data = request.get_json()
+    calendarId = None
+
+    if request_data:
+        if 'calendarId' in request_data:
+            calendarId = request_data['calendarId']
+
+        calendar = DatabaseService.find_calendar(calendarId)
+
+        return jsonify({"Client.event:": calendar.client_event, "Client.id:": calendar.client_id})
+    return jsonify({"message": "There is no data"})
 
 
 if __name__ == '__main__':

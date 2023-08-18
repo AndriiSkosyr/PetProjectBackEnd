@@ -267,3 +267,6 @@ def delete_zoom_meeting(meeting_id):
     meeting = session.query(ZoomMeeting).filter(ZoomMeeting.meeting_id == meeting_id).first()
     session.delete(meeting)
     session.commit()
+
+
+print(find_client(29))
