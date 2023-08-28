@@ -351,5 +351,97 @@ def read_event():
         return jsonify({'EventId': event.event_id, 'ClientName': event.client_name, 'EventDate': event.event_date, 'SummaryText': event.summary_text, 'Description': event.description, 'MeetingLink': event.meeting_link, 'CalendarId': event.calendar_id})
 
 
+@app.route('/meeting', methods=['POST'])
+def create_meeting():
+    request_data = request.get_json()
+    meetingId = None
+    meetingSoundRecord = None
+    meetingDate = None
+    eventId = None
+
+    if request_data:
+        if 'meetingId' in request_data:
+            meetingId = request_data['meetingId']
+        if 'meetingSoundRecord' in request_data:
+            meetingSoundRecord = request_data['meetingSoundRecord']
+        if 'meetingDate' in request_data:
+            meetingDate = request_data['meetingDate']
+        if 'eventId' in request_data:
+            eventId = request_data['eventId']
+
+        meeting = DatabaseService.find_meeting(meetingId)
+        if meeting:
+            msg = 'Meeting already exists!'
+        else:
+            DatabaseService.insert_zoom_meeting('meetnig', meetingId, meetingSoundRecord, meetingDate, eventId)
+            msg = 'You have successfully added the meeting!'
+        return jsonify({"Message": msg})
+    else:
+        return jsonify({"Message": "There is no data!"})
+
+
+@app.route('/meeting', methods=['PUT'])
+def update_meeting():
+    request_data = request.get_json()
+    meetingId = None
+    meetingSoundRecord = None
+    meetingDate = None
+    eventId = None
+
+    if request_data:
+        if 'meetingId' in request_data:
+            meetingId = request_data['meetingId']
+        if 'meetingSoundRecord' in request_data:
+            meetingSoundRecord = request_data['meetingSoundRecord']
+        if 'meetingDate' in request_data:
+            meetingDate = request_data['meetingDate']
+        if 'eventId' in request_data:
+            eventId = request_data['eventId']
+
+        meeting = DatabaseService.find_meeting(meetingId)
+        if meeting:
+            meeting.meeting_id = meetingId
+            meeting.meeting_sound_record = meetingSoundRecord
+            meeting.meeting_date = meetingDate
+            meeting.event_id = eventId
+            DatabaseService.update_zoom_meeting(meetingId, meeting)
+            msg = 'You have successfully updated the meeting!'
+        else:
+            msg = 'There is no such meeting!'
+        return jsonify({"Message": msg})
+    else:
+        return jsonify({'Message': "There is no such data!"})
+
+
+@app.route('/meeting', methods=['DELETE'])
+def delete_meeting():
+    request_data = request.get_json()
+    meetingId = None
+
+    if request_data:
+        if 'meetingId' in request_data:
+            meetingId = request_data['meetingId']
+
+        DatabaseService.delete_zoom_meeting(meetingId)
+        msg = 'Zoom meeting deleted successfully.'
+        return jsonify({'Message': msg})
+    else:
+        return jsonify({"Message": "There is no data"})
+
+
+@app.route('/meeting', methods=['GET'])
+def read_meeting():
+    request_data = request.get_json()
+    meetingId = None
+
+    if request_data:
+        if 'meetingId' in request_data:
+            meetingId = request_data['meetingId']
+
+        meeting = DatabaseService.find_meeting(meetingId)
+
+        return jsonify({'MeetingId': meeting.meeting_id, 'MeetingSoundRecord': meeting.meeting_sound_record, "MeetingDate": meeting.meeting_date, "EventId": meeting.event_id})
+
+
 if __name__ == '__main__':
     app.run()
