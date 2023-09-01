@@ -43,7 +43,7 @@ def logout():
     session.pop('loggedin', None)
     session.pop('clientId', None)
     session.pop('clientName', None)
-    return redirect(url_for('login'))
+    return jsonify({"Message": "Logged out successfully!"})
 
 
 @app.route('/check_status')
@@ -85,8 +85,8 @@ def create_client():
         return jsonify({'Message': 'There is no request data!'})
 
 
-@app.route('/client', methods=['DELETE'])
-def delete_client():
+@app.route('/client', methods=['GET'])
+def read_client():
     request_data = request.get_json()
     clientId = None
 
@@ -94,13 +94,12 @@ def delete_client():
         if 'clientId' in request_data:
             clientId = request_data['clientId']
 
-        if not DatabaseService.delete_client(clientId):
-            msg = 'There is no such client!'
+        account = DatabaseService.find_client(clientId)
+        if account:
+            return jsonify({'Client.name:': account.client_name, 'Client.email:': account.client_email})
         else:
-            msg = 'User account deleted successfully!'
-        return jsonify({'Message': msg})
-    else:
-        return jsonify({'Message': 'There is no request data!'})
+            return jsonify({'Message': 'There is no such client!'})
+    return jsonify({'Message': 'There is no request data!'})
 
 
 @app.route('/client', methods=['PUT'])
@@ -121,17 +120,17 @@ def update_client():
         if 'clientId' in request_data:
             clientId = request_data['clientId']
 
-        account = DatabaseService.find_client(clientId)
-        if account:
+        client = DatabaseService.find_client(clientId)
+        if client:
             if not re.match(r'[^@]+@[^@]+\.[^@]+', clientEmail):
                 msg = 'Invalid email address!'
             elif not re.match(r'[A-Za-z0-9]+', clientName):
                 msg = 'Username must contain only characters and numbers!'
             else:
-                account.client_name = clientName
-                account.client_password = clientPassword
-                account.client_email = clientEmail
-                DatabaseService.update_client(clientId, account)
+                client.client_name = clientName
+                client.client_password = clientPassword
+                client.client_email = clientEmail
+                DatabaseService.update_client(clientId, client)
                 msg = 'You have successfully updated the client account!'
             return jsonify({'message': msg})
         else:
@@ -141,8 +140,8 @@ def update_client():
         return jsonify({'message': 'There is no request data!'})
 
 
-@app.route('/client', methods=['GET'])
-def read_client():
+@app.route('/client', methods=['DELETE'])
+def delete_client():
     request_data = request.get_json()
     clientId = None
 
@@ -150,12 +149,15 @@ def read_client():
         if 'clientId' in request_data:
             clientId = request_data['clientId']
 
-        account = DatabaseService.find_client(clientId)
-        if account:
-            return jsonify({'Client.name:': account.client_name, 'Client.email:': account.client_email})
+        client = DatabaseService.find_client(clientId)
+        if client:
+            DatabaseService.delete_client(clientId)
+            msg = 'User account deleted successfully!'
         else:
-            return jsonify({'Message': 'There is no such client!'})
-    return jsonify({'Message': 'There is no request data!'})
+            msg = 'There is no such client!'
+        return jsonify({'Message': msg})
+    else:
+        return jsonify({'Message': 'There is no request data!'})
 
 
 @app.route('/calendar', methods=['POST'])
@@ -182,6 +184,23 @@ def create_calendar():
         return jsonify({'Message': msg})
     else:
         return jsonify({'message': 'There is no request data!'})
+
+
+@app.route('/calendar', methods=['GET'])
+def read_calendar():
+    request_data = request.get_json()
+    calendarId = None
+
+    if request_data:
+        if 'calendarId' in request_data:
+            calendarId = request_data['calendarId']
+
+        calendar = DatabaseService.find_calendar(calendarId)
+        if calendar:
+            return jsonify({'Client.event:': calendar.client_event, 'Client.id:': calendar.client_id})
+        else:
+            return jsonify({'Message': 'There is no such calendar!'})
+    return jsonify({'message': 'There is no request data!'})
 
 
 @app.route('/calendar', methods=['PUT'])
@@ -221,30 +240,15 @@ def delete_calendar():
         if 'calendarId' in request_data:
             calendarId = request_data['calendarId']
 
-        if not DatabaseService.delete_google_calendar(calendarId):
-            msg = 'There is no such calendar!'
-        else:
-            msg = 'Google calendar deleted successfully.'
-        return jsonify({'Message': msg})
-    else:
-        return jsonify({'message': 'There is no request data'})
-
-
-@app.route('/calendar', methods=['GET'])
-def read_calendar():
-    request_data = request.get_json()
-    calendarId = None
-
-    if request_data:
-        if 'calendarId' in request_data:
-            calendarId = request_data['calendarId']
-
         calendar = DatabaseService.find_calendar(calendarId)
         if calendar:
-            return jsonify({'Client.event:': calendar.client_event, 'Client.id:': calendar.client_id})
+            DatabaseService.delete_google_calendar(calendarId)
+            msg = 'Google calendar deleted successfully.'
         else:
-            return jsonify({'Message': 'There is no such calendar!'})
-    return jsonify({'message': 'There is no request data!'})
+            msg = 'There is no such calendar!'
+        return jsonify({'Message': msg})
+    else:
+        return jsonify({'message': 'There is no request data!'})
 
 
 @app.route('/event', methods=['POST'])
@@ -283,6 +287,23 @@ def create_event():
         return jsonify({'Message': msg})
     else:
         return jsonify({'message': 'There is no request data!'})
+
+
+@app.route('/event', methods=['GET'])
+def read_event():
+    request_data = request.get_json()
+    eventId = None
+
+    if request_data:
+        if 'eventId' in request_data:
+            eventId = request_data['eventId']
+
+        event = DatabaseService.find_event(eventId)
+        if event:
+            return jsonify({'EventId': event.event_id, 'ClientName': event.client_name, 'EventDate': event.event_date, 'SummaryText': event.summary_text, 'Description': event.description, 'MeetingLink': event.meeting_link, 'CalendarId': event.calendar_id})
+        else:
+            return jsonify({'Message': 'There is no such client!'})
+    return jsonify({'Message': 'There is no request data!'})
 
 
 @app.route('/event', methods=['PUT'])
@@ -339,30 +360,15 @@ def delete_event():
         if 'eventId' in request_data:
             eventId = request_data['eventId']
 
-        if not DatabaseService.delete_calendar_event(eventId):
-            msg = 'There is no such event!'
-        else:
-            msg = 'Calendar event deleted successfully!'
-        return jsonify({'Message': msg})
-    else:
-        return jsonify({'message': 'There is no request data!'})
-
-
-@app.route('/event', methods=['GET'])
-def read_event():
-    request_data = request.get_json()
-    eventId = None
-
-    if request_data:
-        if 'eventId' in request_data:
-            eventId = request_data['eventId']
-
         event = DatabaseService.find_event(eventId)
         if event:
-            return jsonify({'EventId': event.event_id, 'ClientName': event.client_name, 'EventDate': event.event_date, 'SummaryText': event.summary_text, 'Description': event.description, 'MeetingLink': event.meeting_link, 'CalendarId': event.calendar_id})
+            DatabaseService.delete_calendar_event(eventId)
+            msg = 'Calendar event deleted successfully!'
         else:
-            return jsonify({'Message': 'There is no such client!'})
-    return jsonify({'Message': 'There is no request data!'})
+            msg = 'There is no such event!'
+        return jsonify({'Message': msg})
+    else:
+        return jsonify({'Message': 'There is no request data!'})
 
 
 @app.route('/meeting', methods=['POST'])
@@ -387,11 +393,28 @@ def create_meeting():
         if meeting:
             msg = 'Meeting already exists!'
         else:
-            DatabaseService.insert_zoom_meeting('meetnig', meetingId, meetingSoundRecord, meetingDate, eventId)
+            DatabaseService.insert_zoom_meeting('meeting', meetingId, meetingSoundRecord, meetingDate, eventId)
             msg = 'You have successfully added the meeting!'
         return jsonify({'Message': msg})
     else:
         return jsonify({'Message': 'There is no request data!'})
+
+
+@app.route('/meeting', methods=['GET'])
+def read_meeting():
+    request_data = request.get_json()
+    meetingId = None
+
+    if request_data:
+        if 'meetingId' in request_data:
+            meetingId = request_data['meetingId']
+
+        meeting = DatabaseService.find_meeting(meetingId)
+        if meeting:
+            return jsonify({'MeetingId': meeting.meeting_id, 'MeetingSoundRecord': meeting.meeting_sound_record, 'MeetingDate': meeting.meeting_date, 'EventId': meeting.event_id})
+        else:
+            return jsonify({'Message': 'There is no such meeting!'})
+    return jsonify({'Message': 'There is no request data!'})
 
 
 @app.route('/meeting', methods=['PUT'])
@@ -436,30 +459,15 @@ def delete_meeting():
         if 'meetingId' in request_data:
             meetingId = request_data['meetingId']
 
-        if not DatabaseService.delete_zoom_meeting(meetingId):
-            msg = 'There is no such meeting!'
-        else:
+        meeting = DatabaseService.find_meeting(meetingId)
+        if meeting:
+            DatabaseService.delete_zoom_meeting(meetingId)
             msg = 'Zoom meeting deleted successfully!'
+        else:
+            msg = 'There is no such meeting!'
         return jsonify({'Message': msg})
     else:
         return jsonify({'Message': 'There is no request data!'})
-
-
-@app.route('/meeting', methods=['GET'])
-def read_meeting():
-    request_data = request.get_json()
-    meetingId = None
-
-    if request_data:
-        if 'meetingId' in request_data:
-            meetingId = request_data['meetingId']
-
-        meeting = DatabaseService.find_meeting(meetingId)
-        if meeting:
-            return jsonify({'MeetingId': meeting.meeting_id, 'MeetingSoundRecord': meeting.meeting_sound_record, 'MeetingDate': meeting.meeting_date, 'EventId': meeting.event_id})
-        else:
-            return jsonify({'Message': 'There is no such meeting!'})
-    return jsonify({'Message': 'There is no request data!'})
 
 
 if __name__ == '__main__':
