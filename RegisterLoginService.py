@@ -1,4 +1,5 @@
-from flask import Flask, request, redirect, url_for, session, jsonify
+import flask
+from flask import Flask, request, session, jsonify
 import DatabaseService
 import re
 
@@ -80,7 +81,14 @@ def create_client():
         else:
             DatabaseService.insert_client('client1', clientId, clientName, clientEmail, clientPassword)
             msg = 'You have successfully registered!'
-        return jsonify({'Message': msg})
+
+        # new code for response
+
+        response = flask.Response()
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
+
+        # return jsonify({'Message': msg})
     else:
         return jsonify({'Message': 'There is no request data!'})
 
