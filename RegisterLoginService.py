@@ -1,10 +1,11 @@
-import flask
 from flask import Flask, request, session, jsonify
+from flask_cors import CORS
 import DatabaseService
 import re
 
 app = Flask(__name__)
 app.secret_key = '1111'
+CORS(app, origins="http://localhost:3000")
 
 
 @app.route('/')
@@ -81,14 +82,7 @@ def create_client():
         else:
             DatabaseService.insert_client('client1', clientId, clientName, clientEmail, clientPassword)
             msg = 'You have successfully registered!'
-
-        # new code for response
-
-        response = flask.Response()
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        return response
-
-        # return jsonify({'Message': msg})
+        return jsonify({'Message': msg})
     else:
         return jsonify({'Message': 'There is no request data!'})
 
