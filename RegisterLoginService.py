@@ -190,19 +190,13 @@ def create_calendar():
 
 @app.route('/calendar', methods=['GET'])
 def read_calendar():
-    request_data = request.get_json()
-    calendarId = None
+    calendars = DatabaseService.return_google_calendars()
 
-    if request_data:
-        if 'calendarId' in request_data:
-            calendarId = request_data['calendarId']
-
-        calendar = DatabaseService.find_calendar(calendarId)
-        if calendar:
-            return jsonify({'Client.event:': calendar.client_event, 'Client.id:': calendar.client_id})
-        else:
-            return jsonify({'Message': 'There is no such calendar!'})
-    return jsonify({'message': 'There is no request data!'})
+    calendarsList = []
+    for calendar in calendars:
+        listElement = jsonify({'CalendarId': calendar.calendar_id, 'ClientEvent': calendar.client_event, 'ClientId': calendar.client_id}).get_json()
+        calendarsList.append(listElement)
+    return calendarsList
 
 
 @app.route('/calendar', methods=['PUT'])

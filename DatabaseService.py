@@ -127,28 +127,36 @@ def insert_zoom_meeting(object_name, meeting_id, meeting_sound_record, meeting_d
 
 
 # functions to output data from database
-def print_clients():
+def return_clients():
     clients = session.query(Client)
+    clientsList = []
     for client in clients:
-        print(client)
+        clientsList.append(client)
+    return clientsList
 
 
-def print_google_calendars():
+def return_google_calendars():
     calendars = session.query(GoogleCalendar)
+    calendarsList = []
     for calendar in calendars:
-        print(calendar)
+        calendarsList.append(calendar)
+    return calendarsList
 
 
-def print_calendar_events():
+def return_calendar_events():
     events = session.query(CalendarEvent)
+    eventsList = []
     for event in events:
-        print(event)
+        eventsList.append(event)
+    return eventsList
 
 
 def print_zoom_meetings():
     meetings = session.query(ZoomMeeting)
+    meetingList = []
     for meeting in meetings:
-        print(meeting)
+        meetingList.append(meeting)
+    return meetingList
 
 
 # functions to find objects
@@ -267,6 +275,3 @@ def delete_zoom_meeting(meeting_id):
     meeting = session.query(ZoomMeeting).filter(ZoomMeeting.meeting_id == meeting_id).first()
     session.delete(meeting)
     session.commit()
-
-
-print(find_client(29))
