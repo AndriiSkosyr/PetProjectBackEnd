@@ -1,3 +1,5 @@
+import json
+
 from flask import Flask, request, session, jsonify
 from flask_cors import CORS
 import DatabaseService
@@ -89,19 +91,15 @@ def create_client():
 
 @app.route('/client', methods=['GET'])
 def read_client():
-    request_data = request.get_json()
-    clientId = None
+    clients = DatabaseService.return_clients()
 
-    if request_data:
-        if 'clientId' in request_data:
-            clientId = request_data['clientId']
-
-        account = DatabaseService.find_client(clientId)
-        if account:
-            return jsonify({'Client.name:': account.client_name, 'Client.email:': account.client_email})
-        else:
-            return jsonify({'Message': 'There is no such client!'})
-    return jsonify({'Message': 'There is no request data!'})
+    entitiesList = []
+    for client in clients:
+        listElement = jsonify({'ClientName': client.client_name, 'ClientPassword': client.client_password,
+                               'ClientEmail': client.client_email, 'ClientId': client.client_id}).get_json()
+        entitiesList.append(listElement)
+    calendarsJSON = json.dumps(entitiesList)
+    return calendarsJSON
 
 
 @app.route('/client', methods=['PUT'])
@@ -166,12 +164,15 @@ def delete_client():
 def create_calendar():
     request_data = request.get_json()
     calendarId = None
+    calendarName = None
     clientEvent = None
     clientId = None
 
     if request_data:
         if 'calendarId' in request_data:
             calendarId = request_data['calendarId']
+        if 'calendarName' in request_data:
+            calendarName = request_data['calendarName']
         if 'clientEvent' in request_data:
             clientEvent = request_data['clientEvent']
         if 'clientId' in request_data:
@@ -181,7 +182,7 @@ def create_calendar():
         if calendar:
             msg = 'Calendar already exists!'
         else:
-            DatabaseService.insert_google_calendar('calendar', calendarId, clientEvent, clientId)
+            DatabaseService.insert_google_calendar('calendar', calendarId, calendarName, clientEvent, clientId)
             msg = 'You have successfully added the calendar!'
         return jsonify({'Message': msg})
     else:
@@ -194,21 +195,26 @@ def read_calendar():
 
     calendarsList = []
     for calendar in calendars:
-        listElement = jsonify({'CalendarId': calendar.calendar_id, 'ClientEvent': calendar.client_event, 'ClientId': calendar.client_id}).get_json()
+        listElement = jsonify({'CalendarId': calendar.calendar_id, 'CalendarName': calendar.calendar_name,
+                               'ClientEvent': calendar.client_event, 'ClientId': calendar.client_id}).get_json()
         calendarsList.append(listElement)
-    return calendarsList
+    calendarsJSON = json.dumps(calendarsList)
+    return calendarsJSON
 
 
 @app.route('/calendar', methods=['PUT'])
 def update_calendar():
     request_data = request.get_json()
     calendarId = None
+    calendarName = None
     clientEvent = None
     clientId = None
 
     if request_data:
         if 'calendarId' in request_data:
             calendarId = request_data['calendarId']
+        if 'calendarName' in request_data:
+            calendarName = request_data['calendarName']
         if 'clientEvent' in request_data:
             clientEvent = request_data['clientEvent']
         if 'clientId' in request_data:
@@ -218,6 +224,7 @@ def update_calendar():
         if calendar:
             calendar.client_event = clientEvent
             calendar.client_id = clientId
+            calendar.calendar_name = calendarName
             DatabaseService.update_google_calendar(calendarId, calendar)
             msg = 'You have successfully updated the calendar!'
         else:
@@ -251,6 +258,7 @@ def delete_calendar():
 def create_event():
     request_data = request.get_json()
     eventId = None
+    eventName = None
     clientName = None
     eventDate = None
     summaryText = None
@@ -261,6 +269,8 @@ def create_event():
     if request_data:
         if 'eventId' in request_data:
             eventId = request_data['eventId']
+        if 'eventName' in request_data:
+            eventName = request_data['eventName']
         if 'clientName' in request_data:
             clientName = request_data['clientName']
         if 'eventDate' in request_data:
@@ -278,7 +288,7 @@ def create_event():
         if event:
             msg = 'Event already exists!'
         else:
-            DatabaseService.insert_calendar_event('event', eventId, clientName, eventDate, summaryText, description, meetingLink, calendarId)
+            DatabaseService.insert_calendar_event('event', eventId, eventName, clientName, eventDate, summaryText, description, meetingLink, calendarId)
             msg = 'You have successfully added the event!'
         return jsonify({'Message': msg})
     else:
@@ -287,25 +297,24 @@ def create_event():
 
 @app.route('/event', methods=['GET'])
 def read_event():
-    request_data = request.get_json()
-    eventId = None
+    events = DatabaseService.return_calendar_events()
 
-    if request_data:
-        if 'eventId' in request_data:
-            eventId = request_data['eventId']
-
-        event = DatabaseService.find_event(eventId)
-        if event:
-            return jsonify({'EventId': event.event_id, 'ClientName': event.client_name, 'EventDate': event.event_date, 'SummaryText': event.summary_text, 'Description': event.description, 'MeetingLink': event.meeting_link, 'CalendarId': event.calendar_id})
-        else:
-            return jsonify({'Message': 'There is no such client!'})
-    return jsonify({'Message': 'There is no request data!'})
+    entitiesList = []
+    for event in events:
+        listElement = jsonify({'EventId': event.event_id, 'EventName': event.event_name, 'ClientName': event.client_name,
+                               'EventDate': event.event_date, 'SummaryText': event.summary_text,
+                               'Description': event.description, 'Meeting link': event.meeting_link,
+                               'CalendarId': event.calendar_id}).get_json()
+        entitiesList.append(listElement)
+    calendarsJSON = json.dumps(entitiesList)
+    return calendarsJSON
 
 
 @app.route('/event', methods=['PUT'])
 def update_event():
     request_data = request.get_json()
     eventId = None
+    eventName = None
     clientName = None
     eventDate = None
     summaryText = None
@@ -316,6 +325,8 @@ def update_event():
     if request_data:
         if 'eventId' in request_data:
             eventId = request_data['eventId']
+        if 'eventName' in request_data:
+            eventName = request_data['eventName']
         if 'clientName' in request_data:
             clientName = request_data['clientName']
         if 'eventDate' in request_data:
@@ -332,6 +343,7 @@ def update_event():
         event = DatabaseService.find_event(eventId)
         if event:
             event.event_id = eventId
+            event.event_name = eventName
             event.client_name = clientName
             event.event_date = eventDate
             event.summary_text = summaryText
@@ -371,6 +383,7 @@ def delete_event():
 def create_meeting():
     request_data = request.get_json()
     meetingId = None
+    meetingName = None
     meetingSoundRecord = None
     meetingDate = None
     eventId = None
@@ -378,6 +391,8 @@ def create_meeting():
     if request_data:
         if 'meetingId' in request_data:
             meetingId = request_data['meetingId']
+        if 'meetingName' in request_data:
+            meetingName = request_data['meetingName']
         if 'meetingSoundRecord' in request_data:
             meetingSoundRecord = request_data['meetingSoundRecord']
         if 'meetingDate' in request_data:
@@ -389,7 +404,7 @@ def create_meeting():
         if meeting:
             msg = 'Meeting already exists!'
         else:
-            DatabaseService.insert_zoom_meeting('meeting', meetingId, meetingSoundRecord, meetingDate, eventId)
+            DatabaseService.insert_zoom_meeting('meeting', meetingId, meetingName, meetingSoundRecord, meetingDate, eventId)
             msg = 'You have successfully added the meeting!'
         return jsonify({'Message': msg})
     else:
@@ -398,25 +413,23 @@ def create_meeting():
 
 @app.route('/meeting', methods=['GET'])
 def read_meeting():
-    request_data = request.get_json()
-    meetingId = None
+    meetings = DatabaseService.return_zoom_meetings()
 
-    if request_data:
-        if 'meetingId' in request_data:
-            meetingId = request_data['meetingId']
-
-        meeting = DatabaseService.find_meeting(meetingId)
-        if meeting:
-            return jsonify({'MeetingId': meeting.meeting_id, 'MeetingSoundRecord': meeting.meeting_sound_record, 'MeetingDate': meeting.meeting_date, 'EventId': meeting.event_id})
-        else:
-            return jsonify({'Message': 'There is no such meeting!'})
-    return jsonify({'Message': 'There is no request data!'})
+    entitiesList = []
+    for meeting in meetings:
+        listElement = jsonify({'MeetingId': meeting.meeting_id, 'MeetingName': meeting.meeting_name,
+                               'MeetingSoundRecord': meeting.meeting_sound_record, 'MeetingDate': meeting.meeting_date,
+                               'EventId': meeting.event_id}).get_json()
+        entitiesList.append(listElement)
+    calendarsJSON = json.dumps(entitiesList)
+    return calendarsJSON
 
 
 @app.route('/meeting', methods=['PUT'])
 def update_meeting():
     request_data = request.get_json()
     meetingId = None
+    meetingName = None
     meetingSoundRecord = None
     meetingDate = None
     eventId = None
@@ -424,6 +437,8 @@ def update_meeting():
     if request_data:
         if 'meetingId' in request_data:
             meetingId = request_data['meetingId']
+        if 'meetingName' in request_data:
+            meetingName = request_data['meetingName']
         if 'meetingSoundRecord' in request_data:
             meetingSoundRecord = request_data['meetingSoundRecord']
         if 'meetingDate' in request_data:
@@ -434,6 +449,7 @@ def update_meeting():
         meeting = DatabaseService.find_meeting(meetingId)
         if meeting:
             meeting.meeting_id = meetingId
+            meeting.meeting_name = meetingName
             meeting.meeting_sound_record = meetingSoundRecord
             meeting.meeting_date = meetingDate
             meeting.event_id = eventId
