@@ -19,22 +19,22 @@ def main_page():
 def login():
     if request.method == 'POST':
         request_data = request.get_json()
-        clientName = None
+        clientEmail = None
         clientPassword = None
 
         if request_data:
-            if 'clientName' in request_data:
-                clientName = request_data['clientName']
+            if 'clientEmail' in request_data:
+                clientEmail = request_data['clientEmail']
             if 'clientPassword' in request_data:
                 clientPassword = request_data['clientPassword']
 
-            account = DatabaseService.find_client_by_name(clientName)
+            account = DatabaseService.find_client_by_email(clientEmail)
             if account and clientPassword == account.client_password:
                 session['logged_in'] = True
                 session['clientId'] = account.client_id
-                session['clientName'] = account.client_name
+                session['clientEmail'] = account.client_email
                 msg = 'Logged in successfully!'
-                return jsonify({'Message': msg, 'Client name': session.get('clientName')})
+                return jsonify({'Message': msg, 'Client email': session.get('clientEmail')})
             else:
                 msg = 'Incorrect username or password!'
                 return jsonify({'Message': msg})

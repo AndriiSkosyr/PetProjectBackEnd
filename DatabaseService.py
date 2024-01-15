@@ -166,8 +166,8 @@ def return_zoom_meetings():
 
 
 # functions to find objects
-def find_client_by_name(client_name):
-    client = session.query(Client).filter(Client.client_name == client_name).first()
+def find_client_by_email(client_email):
+    client = session.query(Client).filter(Client.client_email == client_email).first()
     return client
 
 
