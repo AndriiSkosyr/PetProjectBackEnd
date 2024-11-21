@@ -14,7 +14,7 @@ class Client(Base):
     client_name = Column("clientName", String)
     client_email = Column("clientEmail", String)
     client_password = Column("clientPassword", String)
-    google_calendars = relationship("GoogleCalendar", backref="Client")
+    zoom_meetings = relationship("ZoomMeeting", backref="client", lazy="dynamic")
 
     # class constructor
     def __init__(self, client_id, client_name, client_email, client_password):
@@ -29,54 +29,6 @@ class Client(Base):
                f"Password: /{self.client_password}/"
 
 
-class GoogleCalendar(Base):
-    __tablename__ = "googleCalendars"
-
-    calendar_id = Column("calendarId", Integer, primary_key=True)
-    calendar_name = Column("calendarName", String)
-    client_event = Column("clientEvent", String)
-    client_id = Column("clientId", Integer, ForeignKey('clients.clientId'))
-    calendar_events = relationship("CalendarEvent", backref="GoogleCalendar")
-
-    def __init__(self, calendar_id, calendar_name, client_event, client_id):
-        self.calendar_id = calendar_id
-        self.calendar_name = calendar_name
-        self.client_event = client_event
-        self.client_id = client_id
-
-    def __repr__(self):
-        return f"ID: ({self.calendar_id}) CalendarName: /{self.calendar_name}/ Event: /{self.client_event}/ Client: ({self.client_id})"
-
-
-class CalendarEvent(Base):
-    __tablename__ = "calendarEvents"
-
-    event_id = Column("eventId", Integer, primary_key=True)
-    event_name = Column("eventName", String)
-    client_name = Column("clientName", String)
-    event_date = Column("eventDate", String)
-    summary_text = Column("summaryText", String)
-    description = Column("description", String)
-    meeting_link = Column("meetingLink", String)
-    calendar_id = Column("calendarId", Integer, ForeignKey('googleCalendars.calendarId'))
-    zoom_meeting = relationship("ZoomMeeting", backref="CalendarEvent", uselist=False)
-
-    def __init__(self, event_id, event_name, client_name, event_date, summary_text, description, meeting_link, calendar_id):
-        self.event_id = event_id
-        self.event_name = event_name
-        self.client_name = client_name
-        self.event_date = event_date
-        self.summary_text = summary_text
-        self.description = description
-        self.meeting_link = meeting_link
-        self.calendar_id = calendar_id
-
-    def __repr__(self):
-        return f"ID: ({self.event_id}) EventName: /{self.event_name}/ ClientName: /{self.client_name}/ " \
-               f"EventDate: /{self.event_date}/ SummaryText: /{self.summary_text}/ Description: " \
-               f"/{self.description}/ Link: /{self.meeting_link}/ Calendar: ({self.calendar_id})"
-
-
 class ZoomMeeting(Base):
     __tablename__ = "zoomMeetings"
 
@@ -84,18 +36,20 @@ class ZoomMeeting(Base):
     meeting_name = Column("meetingName", String)
     meeting_sound_record = Column("meetingSoundRecord", String)
     meeting_date = Column("meetingDate", String)
-    event_id = Column("eventId", Integer, ForeignKey('calendarEvents.eventId'))
+    meeting_summary = Column("meetingSummary", String)
+    client_id = Column("clientId", Integer, ForeignKey('clients.clientId'))
 
-    def __init__(self, meeting_id, meeting_name, meeting_sound_record, meeting_date, event_id):
+    def __init__(self, meeting_id, meeting_name, meeting_sound_record, meeting_date, meeting_summary, client_id):
         self.meeting_id = meeting_id
         self.meeting_name = meeting_name
         self.meeting_sound_record = meeting_sound_record
         self.meeting_date = meeting_date
-        self.event_id = event_id
+        self.meeting_summary = meeting_summary
+        self.client_id = client_id
 
     def __repr__(self):
-        return f"ID: ({self.meeting_id}) MeetingName: /{self.meeting_name}/ "\
-               f"Sound record: /{self.meeting_sound_record}/ Date: /{self.meeting_date}/ Event: ({self.event_id})"
+        return f"ID: ({self.meeting_id}) MeetingName: /{self.meeting_name}/ " \
+               f"Sound record: /{self.meeting_sound_record}/ Summary: /{self.meeting_summary}/ Date: /{self.meeting_date}/)"
 
 
 engine = create_engine("sqlite:///testDB.db", echo=True)
@@ -113,21 +67,8 @@ def insert_client(object_name, client_id, client_name, client_email, client_pass
     session.commit()
 
 
-def insert_google_calendar(object_name, calendar_id, calendar_name, client_event, client_id):
-    object_name = GoogleCalendar(calendar_id, calendar_name, client_event, client_id)
-    session.add(object_name)
-    session.commit()
-
-
-def insert_calendar_event(object_name, event_id, event_name, client_name, event_date, summary_text, description, meeting_link,
-                          calendar_id):
-    object_name = CalendarEvent(event_id, event_name, client_name, event_date, summary_text, description, meeting_link, calendar_id)
-    session.add(object_name)
-    session.commit()
-
-
-def insert_zoom_meeting(object_name, meeting_id, meeting_name, meeting_sound_record, meeting_date, event_id):
-    object_name = ZoomMeeting(meeting_id, meeting_name, meeting_sound_record, meeting_date, event_id)
+def insert_zoom_meeting(object_name, meeting_id, meeting_name, meeting_sound_record, meeting_date, meeting_summary, client_id):
+    object_name = ZoomMeeting(meeting_id, meeting_name, meeting_sound_record, meeting_date, meeting_summary, client_id)
     session.add(object_name)
     session.commit()
 
@@ -139,22 +80,6 @@ def return_clients():
     for client in clients:
         clientsList.append(client)
     return clientsList
-
-
-def return_google_calendars():
-    calendars = session.query(GoogleCalendar)
-    calendarsList = []
-    for calendar in calendars:
-        calendarsList.append(calendar)
-    return calendarsList
-
-
-def return_calendar_events():
-    events = session.query(CalendarEvent)
-    eventsList = []
-    for event in events:
-        eventsList.append(event)
-    return eventsList
 
 
 def return_zoom_meetings():
@@ -174,16 +99,6 @@ def find_client_by_email(client_email):
 def find_client(client_id):
     client = session.query(Client).filter(Client.client_id == client_id).first()
     return client
-
-
-def find_calendar(calendar_id):
-    calendar = session.query(GoogleCalendar).filter(GoogleCalendar.calendar_id == calendar_id).first()
-    return calendar
-
-
-def find_event(event_id):
-    event = session.query(CalendarEvent).filter(CalendarEvent.event_id == event_id).first()
-    return event
 
 
 def find_meeting(meeting_id):
@@ -206,49 +121,6 @@ def update_client(id, param_client):
 
     session.commit()
 
-
-def update_google_calendar(id, param_calendar):
-    calendar = session.query(GoogleCalendar).filter(GoogleCalendar.calendar_id == id).first()
-
-    if(param_calendar.calendar_name != None):
-        calendar.calendar_name = param_calendar.calendar_name
-
-    if(param_calendar.client_event != None):
-        calendar.client_event = param_calendar.client_event
-
-    if (param_calendar.client_id != None):
-        calendar.client_id = param_calendar.client_id
-
-    session.commit()
-
-
-def update_calendar_event(id, param_event):
-    event = session.query(CalendarEvent).filter(CalendarEvent.event_id == id).first()
-
-    if(param_event.event_name != None):
-        event.event_name = param_event.event_name
-
-    if(param_event.client_name != None):
-        event.client_name = param_event.client_name
-
-    if(param_event.event_date != None):
-        event.event_date = param_event.event_date
-
-    if(param_event.summary_text != None):
-        event.summary_text = param_event.summary_text
-
-    if(param_event.description != None):
-        event.description = param_event.description
-
-    if(param_event.meeting_link != None):
-        event.meeting_link = param_event.meeting_link
-
-    if(param_event.calendar_id != None):
-        event.calendar_id = param_event.calendar_id
-
-    session.commit()
-
-
 def update_zoom_meeting(id, param_meeting):
     meeting = session.query(ZoomMeeting).filter(ZoomMeeting.meeting_id == id).first()
 
@@ -261,8 +133,11 @@ def update_zoom_meeting(id, param_meeting):
     if(param_meeting.meeting_date != None):
         meeting.meeting_date = param_meeting.meeting_date
 
-    if(param_meeting.event_id != None):
-        meeting.event_id = param_meeting.event_id
+    if(param_meeting.meeting_summary != None):
+        meeting.meeting_summary = param_meeting.meeting_summary
+
+    if(param_meeting.client_id != None):
+        meeting.client_id = param_meeting.client_id
 
     session.commit()
 
@@ -271,18 +146,6 @@ def update_zoom_meeting(id, param_meeting):
 def delete_client(client_id):
     client = session.query(Client).filter(Client.client_id == client_id).first()
     session.delete(client)
-    session.commit()
-
-
-def delete_google_calendar(calendar_id):
-    calendar = session.query(GoogleCalendar).filter(GoogleCalendar.calendar_id == calendar_id).first()
-    session.delete(calendar)
-    session.commit()
-
-
-def delete_calendar_event(event_id):
-    event = session.query(CalendarEvent).filter(CalendarEvent.event_id == event_id).first()
-    session.delete(event)
     session.commit()
 
 
