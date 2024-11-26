@@ -105,6 +105,14 @@ def find_meeting(meeting_id):
     meeting = session.query(ZoomMeeting).filter(ZoomMeeting.meeting_id == meeting_id).first()
     return meeting
 
+def find_meeting_by_name(meeting_name):
+    meeting = session.query(ZoomMeeting).filter(ZoomMeeting.meeting_name == meeting_name).first()
+    return meeting
+
+def find_meetings_by_user_id(client_id):
+    meeting = session.query(ZoomMeeting).filter(ZoomMeeting.client_id == client_id)
+    return meeting
+
 
 # functions to update data in database
 def update_client(id, param_client):

@@ -1,5 +1,10 @@
 import datetime
 import os.path
+from dateutil import parser
+import re
+import pytz
+from jproperties import Properties
+import random
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -11,7 +16,18 @@ import json
 from flask import Flask, request, session, jsonify
 from flask_cors import CORS
 import DatabaseService
-import re
+
+import FormatConverter
+import StorageService
+import AudioToTextService
+import TextToNotesService
+
+configs = Properties()
+
+with open('app_config.properties', 'rb') as config_file:
+    configs.load(config_file)
+
+utc = pytz.UTC
 
 app = Flask(__name__)
 app.secret_key = '1111'
@@ -26,8 +42,16 @@ def main_page():
     return 'Main page.'
 
 
-@app.route('/backend_call')
+@app.route('/backend_call', methods=["POST"])
 def backend_call():
+
+    # Extract clientId from the request
+    client_id = request.json.get("clientId")
+    if not client_id:
+        return jsonify({"error": "Client ID is missing"}), 400
+
+    print(f"Received Client ID: {client_id}")
+
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -77,13 +101,50 @@ def backend_call():
         # Prints the start and name of the next 10 events
         for event in events:
             start = event["start"].get("dateTime", event["start"].get("date"))
-            print(start, event["summary"])
+            end = event['end'].get('dateTime', event['end'].get('date'))
+            start_obj = parser.parse(start)
+            end_obj = parser.parse(end)
+            end_obj = end_obj + datetime.timedelta(minutes=10)
+            with os.scandir(configs.get("PATH").data) as entries:
+                for entry in entries:
+                    print("Local record: ", entry.name)
+                    create_time = os.path.getctime(configs.get("PATH").data + "/" + entry.name)
+                    print('Create_time: ', create_time)
+                    create_date = datetime.datetime.fromtimestamp(create_time)
+                    if ((create_date.replace(tzinfo=None) > start_obj.replace(tzinfo=None)) & (
+                            create_date.replace(tzinfo=None) < end_obj.replace(tzinfo=None))):
+                        print('Records exists')
+                        queried_meeting = DatabaseService.find_meeting_by_name(entry.name)
+                        if not queried_meeting:
+                            meeting_id = random.randint(1, 100)
+                            meeting_sound_record = ', '.join(audio.name for audio in os.scandir(configs.get("PATH").data + '/' + entry.name + '/') if audio.is_file() and audio.name.lower().endswith(('.m4a')))
+                            DatabaseService.insert_zoom_meeting('meeting', meeting_id, entry.name, meeting_sound_record, create_date, " ", client_id)
+                            print("inserted", meeting_sound_record)
+                        else: print("already there")
+                        print("soup", DatabaseService.find_meetings_by_user_id(client_id))
 
+
+
+
+                        # with os.scandir(configs.get("PATH").data + '/' + entry.name + '/') as audios:
+                        #     print(audios)
+                            # for audiofile in audios:
+                                # if (audiofile.name.endswith("m4a")):
+                                #     initialAudiofileName = configs.get("PATH").data + "/" + entry.name + '/' + audiofile.name
+                                #     destinationAudiofileName = initialAudiofileName.replace('m4a', 'wav')
+                                #     # FormatConverter.formatting(initialAudiofileName, destinationAudiofileName)
+                                #     StorageService.store_files(destinationAudiofileName)
+                                #     text = AudioToTextService.transcribe_gcs(
+                                #         "gs://diploma-bucket/" + destinationAudiofileName)
+                                #     print(text)
+                                #     summary = TextToNotesService.summarize_text(text)
+                                #     print(summary)
 
         return jsonify({"message": "Events achieved"}), 200
 
     except HttpError as error:
         return jsonify({"error": f"An error occurred: {error}"}), 500
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -104,7 +165,7 @@ def login():
                 session['clientId'] = account.client_id
                 session['clientEmail'] = account.client_email
                 msg = 'Logged in successfully!'
-                return jsonify({'Message': msg, 'Client email': session.get('clientEmail')})
+                return jsonify({'Message': msg, 'Client id': session.get('clientId')})
             else:
                 msg = 'Incorrect username or password!'
                 return jsonify({'Message': msg})
