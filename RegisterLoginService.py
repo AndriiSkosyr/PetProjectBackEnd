@@ -15,12 +15,16 @@ from googleapiclient.errors import HttpError
 import json
 from flask import Flask, request, session, jsonify
 from flask_cors import CORS
+
+import AutocorrectService
 import DatabaseService
+import SentimentService
+import TextToNotesService
 
 # import FormatConverter
 # import StorageService
 # import AudioToTextService
-# import TextToNotesService
+import TextToNotesService
 
 configs = Properties()
 
@@ -119,9 +123,9 @@ def backend_call():
                             meeting_id = random.randint(1, 100)
                             meeting_sound_record = ', '.join(audio.name for audio in os.scandir(configs.get("PATH").data + '/' + entry.name + '/') if audio.is_file() and audio.name.lower().endswith(('.m4a')))
                             DatabaseService.insert_zoom_meeting('meeting', meeting_id, entry.name, meeting_sound_record, create_date, " ", client_id)
-                            print("inserted", meeting_sound_record)
-                        else: print("already there")
-                        print("soup", DatabaseService.find_meetings_by_user_id(client_id))
+                            print("New meeting was added to the database", meeting_sound_record)
+                        else: print("The meeting already exists in the database")
+                print("Update complete")
 
 
 
@@ -140,11 +144,27 @@ def backend_call():
                                 #     summary = TextToNotesService.summarize_text(text)
                                 #     print(summary)
 
-        return jsonify({"message": "Events achieved"}), 200
+        return jsonify({"message": "Update complete"}), 200
 
     except HttpError as error:
         return jsonify({"error": f"An error occurred: {error}"}), 500
 
+
+@app.route('/summarize', methods=["POST"])
+def summarization():
+    text = """Hello, everybody. Now I am gonna tell you how the app works. So, basically, user creates a meeting, or connects to the existing one. In the process of meeting user starts recording of the meeting. After meeting is finished, or if the user stops the recording, audiofile of the meeting lands in the user's documents folder. 
+
+    After completing the previous step, user can proceed to the app, see the meetings in his calendar, and press the update button to get the summaries of the available meetings records.
+    The backend call starts the process where our app search for the audiofiles in the user's records folder. Also, before adding the audio to the queue, the app also checks if the records are related to the meetings in the user's calendar. If audio is present and it is related to the meeting in user's calendar, this meetings is added to the related db table, and also shows on the front end.
+
+    Next step is to choose one of the available meetings, and get the summary of it. To do it, user presses on the pen icon near the name of the meeting, and make a backend call, passing the meeting id.
+
+    Backend gets it, and using the info from db, gets the audiofile, and go through the chain of transformations:
+    formatting, speech to text, autocorrect, punctuation check, sentimental analysis and summarization. After the process is completed, user can get all the info on the front end"""
+    corrected_text = AutocorrectService.auto_correct_text(text)
+    summary = TextToNotesService.summarize_text(corrected_text)
+    sentiment = SentimentService.analyze_sentiment(corrected_text)
+    return jsonify({"sentiment": sentiment, "message": corrected_text}), 200
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
